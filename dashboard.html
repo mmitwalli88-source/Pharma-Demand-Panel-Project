@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard · Pharma Demand Panel</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">Pharma Demand Panel <span>· Live</span></div>
+    <nav class="pages">
+      <a href="index.html">Overview</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="forecast.html">Forecast</a>
+      <a href="service.html">Service &amp; stock</a>
+      <a href="commercial.html">Commercial</a>
+      <a href="quality.html">Data quality</a>
+    </nav>
+    <div class="spacer"></div>
+    <span class="live"><span class="dot"></span><span class="live-text">Connecting&hellip;</span></span>
+    <button class="theme-btn" type="button">Dark</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="page-head">
+    <div class="eyebrow">COMPREHENSIVE VIEW · CROSS-FILTERED</div>
+    <h1>Everything, cross-filtered</h1>
+    <p class="insight">Every visual below reads the same <span class="js-rows">5,000</span> rows. Click any slicer, bar, slice,
+      heatmap cell or point on the demand line and the whole page re-filters to it. Ratios are recomputed as sums over sums
+      under every combination, so the numbers stay honest wherever you land.</p>
+  </div>
+  <div class="notice"><span class="ico">&#9679;</span>
+    <div><strong>Synthetic enterprise data.</strong> Every product, region and outcome is simulated, so
+      associations describe this simulation, not the pharmaceutical industry. Tags mark what each claim rests on:
+      <span class="tag real">real</span> survived a corrected significance test,
+      <span class="tag study">study</span> was measured once and does not move with the file.
+      Contribution excludes staffing, transport, financing and tax.</div></div>
+  <div class="notice is-critical js-stale" hidden></div>
+
+  <div class="filterbar">
+    <div>
+      <div class="filterbar-inner">
+        <div id="sl-region"></div><div id="sl-family"></div><div id="sl-channel"></div>
+        <div id="sl-promo"></div><div id="sl-crit"></div><div id="sl-year"></div>
+      </div>
+    </div>
+  </div>
+  <div class="filter-summary">
+    <span id="fs-text">Loading&hellip;</span>
+    <button class="reset" id="fs-reset" type="button" hidden>Reset all filters</button>
+  </div>
+
+  <div class="kpi-row" id="kpis"></div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2>Demand against the baseline forecast, for the selection</h2>
+    <p class="note">Click a point on the line to filter the page to that month; click again to clear it.</p>
+    <div class="legend">
+      <span class="legend-item"><span class="swatch" style="background:var(--series-1)"></span>Requested demand</span>
+      <span class="legend-item"><span class="swatch" style="background:var(--series-2)"></span>Baseline forecast</span></div>
+    <div class="panel-scroll"><div id="trend"></div></div>
+  </div>
+
+  <div class="grid two">
+    <div class="panel">
+      <h2>Stockout share by region</h2>
+      <p class="note">Share of product-region-months with any lost pack. One hue: regions are ranked by a magnitude here, not
+        distinguished by colour. Click a bar to filter.</p>
+      <div id="region-bars"></div>
+    </div>
+    <div class="panel">
+      <h2>Demand mix by product family</h2>
+      <p class="note">Share of the selection's requested packs. Family, supplier and dosage form are the same grouping
+        in this file. Click a slice to filter.</p>
+      <div class="donut-wrap"><div id="donut"></div><div class="donut-legend" id="donut-legend"></div></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2>Where region meets family: stockout share</h2>
+    <p class="note">One sequential hue, light to dark. Each cell is a region and a family and carries its own value. Click a cell
+      to filter to both. The five families are five products each, so a cell is a handful of series.</p>
+    <div class="panel-scroll"><div id="heat"></div></div>
+  </div>
+
+  <div class="grid two">
+    <div class="panel">
+      <h2>Promotion: error and shortage together</h2>
+      <p class="note">Both measures are shares, so they sit on one shared axis. A planned promotion is known before the month
+        begins, yet the baseline ignores it. Click a bar row to filter.</p>
+      <div class="legend">
+        <span class="legend-item"><span class="swatch" style="background:var(--series-1)"></span>Forecast error (WAPE)</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--series-2)"></span>Stockout share</span></div>
+      <div id="promo"></div>
+      <div class="facts" id="promo-facts" style="margin-top:14px"></div>
+    </div>
+    <div class="panel">
+      <h2>Stockout share by criticality class</h2>
+      <p class="note">Internal service priority, a property of the product. Criticality is <span class="tag suggestive">suggestive</span>
+        only: it covers 25 products, and the gap does not survive correction for the number of tests run. Click to filter.</p>
+      <div id="crit"></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2>The ten series with the most lost revenue in this selection</h2>
+    <p class="note">Click a row to filter to that product's family and region.</p>
+    <div class="panel-scroll"><div id="top"></div></div>
+  </div>
+
+  <div class="through-line" id="through-line"></div>
+  <footer class="foot">
+    Source: <span class="js-source">Team_2_Enterprise_Dataset_v1.csv</span>, <span class="js-rows">5,000</span> rows,
+    <span class="js-series">125</span> product-region series, <span class="js-period">Jan 2023 to Apr 2026</span>.
+    Every figure tagged live recomputes from the file on each change; the study was measured on
+    <span class="js-study-rows">5,000</span> rows. Last edit reached the screen
+    <span class="js-latency">n/a</span> after the file was saved.
+  </footer>
+</main>
+<script src="app.js"></script>
+<script>
+(function () {
+
+  var f = LDD.fmt, $ = LDD.byId;
+  function tag(v) {
+    var c = v === 'REAL' ? 'real' : v === 'SUGGESTIVE' ? 'suggestive' : v === 'NOISE' ? 'noise' : '';
+    return '<span class="tag ' + c + '">' + v.toLowerCase() + '</span>';
+  }
+  function setText(cls, v) { document.querySelectorAll('.js-' + cls).forEach(function (n) { n.textContent = v; }); }
+  function reg(d, id) {
+    return d.study ? (d.study.register || []).filter(function (r) { return r.id === id; })[0] : null;
+  }
+  function toggle(set, v, repaint) { if (set.has(v)) set.delete(v); else set.add(v); repaint(); }
+
+  var filters = LDD.newFilters(), latest = null;
+  function repaint() { if (latest) draw(latest); }
+  function tog(dim, v) { toggle(filters[dim], v, repaint); }
+
+  LDD.start(function render(d) {
+    if (!d || !d.raw || !d.raw.rows || !d.kpis) return;
+    latest = d; draw(d);
+  });
+
+  function draw(d) {
+    var raw = d.raw, ctx = LDD.ctx, F = ctx.F;
+    var rows = LDD.filterRows(raw, filters), active = LDD.anyFilter(filters);
+
+    var sl = function (id, label, dim, values, o) {
+      LDD.slicer($(id), Object.assign({label: label, values: values, selected: filters[dim], onChange: repaint}, o || {}));
+    };
+    sl('sl-region', 'Region', 'region', raw.regions, {colorFn: function (v) { return LDD.colorFor('region', v); }});
+    sl('sl-family', 'Product family', 'family', raw.families, {colorFn: function (v) { return LDD.colorFor('family', v); },
+       note: 'Same grouping as supplier and dosage form.'});
+    sl('sl-channel', 'Sales channel', 'channel', raw.channels, {note: 'Same grouping as customer segment.'});
+    sl('sl-promo', 'Promotion', 'promo', raw.promos);
+    sl('sl-crit', 'Criticality', 'crit', raw.criticalities);
+    sl('sl-year', 'Year', 'year', ctx.years);
+
+    $('fs-text').innerHTML = (active ? 'Showing ' : 'Showing all ') + '<span class="count">' + f.int(rows.length) + '</span> of '
+      + f.int(raw.rows.length) + ' product-region-months' + (active ? ', filtered' : '')
+      + (filters.month.size ? ' to ' + Array.from(filters.month).sort().map(f.month).join(', ') : '') + '.';
+    $('fs-reset').hidden = !active;
+    $('fs-reset').onclick = function () { filters = LDD.newFilters(); repaint(); };
+
+    if (!rows.length) {
+      ['trend','region-bars','donut','donut-legend','heat','promo','promo-facts','crit','top'].forEach(function (id) { $(id).innerHTML = ''; });
+      $('kpis').innerHTML = '<div class="empty-state" style="grid-column:1/-1">No rows match this combination. Clear a filter to bring the visuals back.</div>';
+      $('through-line').innerHTML = ''; return;
+    }
+
+    var a = LDD.agg(rows), all = LDD.agg(raw.rows);
+    var byM = LDD.groupAgg(rows, LDD.key.month, raw.months.filter(function (m) { return rows.some(function () { return true; }); }));
+    byM = byM.filter(function (x) { return x.n > 0; });
+    var sp = function (k) { return byM.map(function (m) { return m[k]; }); };
+    $('kpis').innerHTML =
+        LDD.tile('Weighted fill rate', f.pct(a.fill, 2), f.int(a.lost) + ' packs unfilled', LDD.sparkline(sp('fill'), {color: 'var(--series-3)'}))
+      + LDD.tile('Stockout share', f.pct(a.so, 2), f.int(a.stockouts) + ' of ' + f.int(a.n) + ' rows', LDD.sparkline(sp('so'), {color: 'var(--series-2)'}))
+      + LDD.tile('Forecast error (WAPE)', f.pct(a.wape, 2), 'Bias ' + f.spct(a.bias, 2), LDD.sparkline(sp('wape')), a.bias < 0 ? 'bad' : '')
+      + LDD.tile('Lost revenue', f.compact(a.lostrev), f.pct(all.lostrev ? a.lostrev / all.lostrev : 0, 0) + ' of all lost revenue', LDD.sparkline(sp('lostrev'), {color: 'var(--critical)'}))
+      + LDD.tile('Gross profit', f.compact(a.gp), 'Margin ' + f.pct(a.margin, 1), LDD.sparkline(sp('gp'), {color: 'var(--series-3)'}));
+
+    LDD.lineChart($('trend'), {
+      labels: byM.map(function (m) { return m.name; }), labelFmt: f.month, tipTitle: f.monthLong,
+      series: [{name: 'Requested demand', color: 'var(--series-1)', values: sp('demand'), fill: true},
+               {name: 'Baseline forecast', color: 'var(--series-2)', values: sp('forecast'), dash: '5 4'}],
+      yFmt: f.packs, tipFmt: function (v) { return f.int(v) + ' packs'; },
+      tipExtra: function (i) { return LDD.tRow('Error', f.spct(byM[i].bias, 1)) + '<div class="t-note">Click to filter to this month</div>'; },
+      onClick: function (i) { tog('month', byM[i].name); }
+    });
+
+    var regs = LDD.groupAgg(rows, LDD.key.region, null, 'so');
+    LDD.barList($('region-bars'), regs.map(function (r) {
+      return {label: r.name, value: r.so, valueText: f.pct(r.so, 1), selected: filters.region.has(r.name),
+        tip: LDD.tTitle(r.name) + LDD.tRow('Stockout share', f.pct(r.so, 2)) + LDD.tRow('Stockout months', f.int(r.stockouts) + ' of ' + f.int(r.n))
+          + LDD.tRow('Fill rate', f.pct(r.fill, 2)) + '<div class="t-note">Click to filter</div>',
+        onClick: function () { tog('region', r.name); }};
+    }), {max: Math.max.apply(null, regs.map(function (r) { return r.so; }).concat([0.0001]))});
+
+    var fams = LDD.groupAgg(rows, LDD.key.family, raw.families.filter(function (x) { return true; })).filter(function (x) { return x.n > 0; });
+    LDD.donut($('donut'), fams.map(function (x) {
+      return {name: x.name, value: x.demand, color: LDD.colorFor('family', x.name), selected: filters.family.has(x.name),
+        tip: LDD.tTitle(x.name) + LDD.tRow('Requested packs', f.int(x.demand)) + LDD.tRow('Share', f.pct(x.demand / a.demand, 1))
+          + LDD.tRow('Stockout share', f.pct(x.so, 1)) + '<div class="t-note">Click to filter</div>'};
+    }), {centre: f.packs(a.demand), centreLabel: 'requested packs', onClick: function (n) { tog('family', n); }});
+    $('donut-legend').innerHTML = fams.map(function (x) {
+      return '<div class="row"><span class="swatch" style="background:' + LDD.colorFor('family', x.name) + '"></span>' + x.name
+        + '<span class="v">' + f.pct(x.demand / a.demand, 1) + '</span></div>';
+    }).join('');
+
+    // heatmap region x family
+    var vals = raw.regions.map(function (rg) {
+      return raw.families.map(function (fm) {
+        var sub = rows.filter(function (r) { return raw.regions[r[F.region]] === rg && ctx.famOf[r[F.product]] === fm; });
+        return sub.length ? LDD.agg(sub).so : null;
+      });
+    });
+    LDD.heatmap($('heat'), {rows: raw.regions, cols: raw.families, values: vals, valFmt: function (v) { return f.pct(v, 1); },
+      title: 'Stockout share',
+      selected: function (r, c) { return filters.region.has(r) && filters.family.has(c); },
+      onClick: function (r, c) {
+        var both = filters.region.has(r) && filters.family.has(c);
+        filters.region.clear(); filters.family.clear();
+        if (!both) { filters.region.add(r); filters.family.add(c); }
+        repaint();
+      }});
+
+    var pr = LDD.groupAgg(rows, LDD.key.promo, raw.promos).filter(function (x) { return x.n > 0; });
+    LDD.pairedBars($('promo'), pr.map(function (x) { return {name: x.name, a: x.wape, b: x.so}; }),
+      {aColor: 'var(--series-1)', bColor: 'var(--series-2)', aName: 'WAPE', bName: 'Stockout share', fmt: function (v) { return f.pct(v, 1); }});
+    $('promo-facts').innerHTML = pr.map(function (x) {
+      return '<div class="fact"><b>' + f.spct(x.bias, 1) + '</b>' + x.name + ': signed bias on ' + f.int(x.n) + ' rows<br>'
+        + '<a href="#" data-p="' + x.name + '" class="pf">filter to this</a></div>';
+    }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('.pf'), function (n) {
+      n.addEventListener('click', function (e) { e.preventDefault(); tog('promo', n.getAttribute('data-p')); });
+    });
+
+    var cr = LDD.groupAgg(rows, LDD.key.crit, raw.criticalities).filter(function (x) { return x.n > 0; });
+    LDD.barList($('crit'), cr.map(function (x) {
+      return {label: x.name, value: x.so, valueText: f.pct(x.so, 1), selected: filters.crit.has(x.name),
+        tip: LDD.tTitle(x.name + ' criticality') + LDD.tRow('Stockout share', f.pct(x.so, 2)) + LDD.tRow('Lost revenue', f.compact(x.lostrev))
+          + '<div class="t-note">Click to filter</div>', onClick: function () { tog('crit', x.name); }};
+    }), {sequential: true, max: Math.max.apply(null, cr.map(function (x) { return x.so; }).concat([0.0001]))});
+
+    var ser = LDD.groupAgg(rows, LDD.key.series, null, 'lostrev').slice(0, 10);
+    LDD.dataTable($('top'),
+      [{label: 'Series'}, {label: 'Lost revenue', num: true}, {label: 'Stockout months', num: true}, {label: 'Fill rate', num: true},
+       {label: 'WAPE', num: true}, {label: 'Bias', num: true}],
+      ser.map(function (s) { return [s.name, f.compact(s.lostrev), f.int(s.stockouts) + ' of ' + s.n, f.pct(s.fill, 2), f.pct(s.wape, 1), f.spct(s.bias, 1)]; }),
+      {onRow: function (i) {
+        var parts = ser[i].name.split(' · '), p = raw.products.filter(function (x) { return x.id === parts[0]; })[0];
+        filters.region.clear(); filters.family.clear(); filters.region.add(parts[1]); filters.family.add(p.family); repaint();
+      }});
+
+    var topReg = regs[0], topFam = LDD.groupAgg(rows, LDD.key.family, null, 'lostrev')[0];
+    $('through-line').innerHTML = '<b>Read this selection.</b> It holds ' + f.pct(a.demand / all.demand, 0) + ' of all requested packs and '
+      + f.pct(all.lostrev ? a.lostrev / all.lostrev : 0, 0) + ' of lost revenue. Its fill rate is ' + f.pct(a.fill, 2)
+      + ', its stockout share ' + f.pct(a.so, 1) + ' and its signed forecast bias ' + f.spct(a.bias, 1) + '. '
+      + (regs.length > 1 ? 'Within it, ' + topReg.name + ' records the highest stockout share (' + f.pct(topReg.so, 1) + ') and ' + topFam.name
+        + ' the most lost revenue (' + f.compact(topFam.lostrev) + '). ' : '')
+      + 'Small selections hold few series, so a rate on a handful of rows moves a lot; check the row count above before reading one.';
+  }
+
+})();
+</script>
+</body>
+</html>
