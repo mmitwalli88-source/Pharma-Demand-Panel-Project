@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forecast · Pharma Demand Panel</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">Pharma Demand Panel <span>· Live</span></div>
+    <nav class="pages">
+      <a href="index.html">Overview</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="forecast.html">Forecast</a>
+      <a href="service.html">Service &amp; stock</a>
+      <a href="commercial.html">Commercial</a>
+      <a href="quality.html">Data quality</a>
+    </nav>
+    <div class="spacer"></div>
+    <span class="live"><span class="dot"></span><span class="live-text">Connecting&hellip;</span></span>
+    <button class="theme-btn" type="button">Dark</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="page-head">
+    <div class="eyebrow">DEMAND &amp; FORECAST ACCURACY</div>
+    <h1>The baseline fails where demand is planned to change</h1>
+    <p class="insight">The three-month average carries a signed bias of <b class="js-promo-bias">-14.0%</b> in planned-promotion
+      months and <b class="js-other-bias">+2.0%</b> in the rest, so it under-forecasts exactly when stock is being pushed.
+      Promoted months stock out in <b class="js-promo-so">12.8%</b> of rows against <b class="js-other-so">5.0%</b>.
+      A ridge regression on inputs known before the month begins cuts held-out error from
+      <b id="m-base">14.59%</b> to <b id="m-reg">9.19%</b>.</p>
+  </div>
+  <div class="notice"><span class="ico">&#9679;</span>
+    <div><strong>Synthetic enterprise data.</strong> Every product, region and outcome is simulated, so
+      associations describe this simulation, not the pharmaceutical industry. Tags mark what each claim rests on:
+      <span class="tag real">real</span> survived a corrected significance test,
+      <span class="tag study">study</span> was measured once and does not move with the file.
+      Contribution excludes staffing, transport, financing and tax.</div></div>
+  <div class="notice is-critical js-stale" hidden></div>
+
+  <div class="kpi-row" id="kpis"></div>
+
+  <div class="grid two">
+    <div class="panel">
+      <h2>Signed forecast bias by month</h2>
+      <p class="note">Below zero the baseline under-forecast, which is the direction that produces lost sales; above zero it
+        over-forecast, which produces holding and expiry cost. Hover a column for the month's pack counts.</p>
+      <div class="panel-scroll"><div id="bias"></div></div>
+    </div>
+    <div class="panel">
+      <h2>Promotion: planned, yet missed</h2>
+      <p class="note">Promotion status is known before the month begins, but the baseline does not use it.
+        <span class="tag real">real</span> Error, bias and stockouts all differ at p &lt; 0.001 after correction for 18 tests.</p>
+      <div class="legend">
+        <span class="legend-item"><span class="swatch" style="background:var(--series-1)"></span>Forecast error (WAPE)</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--series-2)"></span>Stockout share</span></div>
+      <div id="promo"></div>
+      <div class="facts" id="promo-facts" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2>Persistent bias does not tell you which series stock out</h2>
+    <p class="note">One dot per product-region series (125). Left of zero the baseline under-forecast over all 40 months. Axes are fitted to the
+      data, not zero-based. Dotted line: least-squares fit; Pearson r = <b id="r">...</b> (live), close to no relationship. The shortages come from
+      individual under-forecast months (<span class="js-underlost">97.6%</span> of lost packs), not from series that run biased on average,
+      so the fix is at the month level (promotions, seasonal turns), not a per-series bias correction.</p>
+    <div class="legend" id="sc-legend"></div>
+    <div class="panel-scroll"><div id="scatter"></div></div>
+  </div>
+
+  <div class="grid two">
+    <div class="panel">
+      <h2>Regression against the baseline on the held-out months <span class="tag study">study</span></h2>
+      <p class="note" id="model-note">Test rows are January to April 2026 (500 rows), never seen during fitting. Both forecasts
+        are scored on identical rows.</p>
+      <div class="legend">
+        <span class="legend-item"><span class="swatch" style="background:var(--series-2)"></span>Baseline WAPE</span>
+        <span class="legend-item"><span class="swatch" style="background:var(--series-3)"></span>Regression WAPE</span></div>
+      <div id="model"></div>
+      <div class="facts" id="model-facts" style="margin-top:14px"></div>
+    </div>
+    <div class="panel">
+      <h2>Seasonal pattern in demand <span class="tag study">study</span></h2>
+      <p class="note">Average demand in each calendar month against the series' own mean (zero = a typical month).
+        <span class="tag real">real</span> The month effect is large (F test, p &lt; 0.0001), which is why a rolling mean
+        lags it.</p>
+      <div class="panel-scroll"><div id="season"></div></div>
+    </div>
+  </div>
+
+  <div class="notice"><span class="ico">&#9679;</span><div><strong>What the regression result does and does not show.</strong>
+    It shows a one-month-ahead forecast built from inputs available before the month is more accurate than the moving average on
+    these test rows. It does not show that adopting it would lower stockouts or cost: that needs a sequential replenishment simulation.
+    The source publication quotes a test WAPE of 9.07%; the same experiment re-run here measures <span id="m-reg2">9.19%</span>,
+    and this page reports the measured value.</div></div>
+
+  <div class="through-line"><b>The through-line.</b> Forecast error is not spread evenly. It piles up where the future differs from
+    the recent past: promotions and seasonal turns. That is where a better forecast, or a rule that adjusts the baseline for planned
+    promotions, earns its place before any stock is added.</div>
+  <footer class="foot">
+    Source: <span class="js-source">Team_2_Enterprise_Dataset_v1.csv</span>, <span class="js-rows">5,000</span> rows,
+    <span class="js-series">125</span> product-region series, <span class="js-period">Jan 2023 to Apr 2026</span>.
+    Every figure tagged live recomputes from the file on each change; the study was measured on
+    <span class="js-study-rows">5,000</span> rows. Last edit reached the screen
+    <span class="js-latency">n/a</span> after the file was saved.
+  </footer>
+</main>
+<script src="app.js"></script>
+<script>
+(function () {
+
+  var f = LDD.fmt, $ = LDD.byId;
+  function tag(v) {
+    var c = v === 'REAL' ? 'real' : v === 'SUGGESTIVE' ? 'suggestive' : v === 'NOISE' ? 'noise' : '';
+    return '<span class="tag ' + c + '">' + v.toLowerCase() + '</span>';
+  }
+  function setText(cls, v) { document.querySelectorAll('.js-' + cls).forEach(function (n) { n.textContent = v; }); }
+  function reg(d, id) {
+    return d.study ? (d.study.register || []).filter(function (r) { return r.id === id; })[0] : null;
+  }
+  function toggle(set, v, repaint) { if (set.has(v)) set.delete(v); else set.add(v); repaint(); }
+
+  LDD.start(function render(d) {
+    if (!d || !d.kpis || !d.raw) return;
+    var k = d.kpis, raw = d.raw, F = LDD.ctx.F, m = d.study && d.study.model && d.study.model.test;
+    var underRows = 0; raw.rows.forEach(function (r) { if (r[F.forecast] < r[F.demand]) underRows++; });
+    $('kpis').innerHTML =
+        LDD.tile('Forecast error (WAPE)', f.pct(k.wape, 2), 'Baseline, all ' + f.int(k.rows) + ' rows <span class="tag live">live</span>')
+      + LDD.tile('Signed bias', f.spct(k.bias, 2), k.bias < 0 ? 'Under-forecast on balance' : 'Over-forecast on balance', '', k.bias < 0 ? 'bad' : '')
+      + LDD.tile('Under-forecast rows', f.pct(underRows / k.rows, 1), f.int(underRows) + ' of ' + f.int(k.rows) + ' product-region-months')
+      + (m ? LDD.tile('Regression WAPE', f.pct(m.reg_wape, 2), 'vs baseline ' + f.pct(m.base_wape, 2) + ' on ' + m.n + ' test rows <span class="tag study">study</span>', '', 'good') : '');
+
+    var tr = d.trend;
+    LDD.columns($('bias'), tr.map(function (x) {
+      return {name: x.month, label: f.month(x.month), value: x.bias, color: x.bias < 0 ? 'var(--critical)' : 'var(--series-1)',
+        tip: LDD.tTitle(f.monthLong(x.month)) + LDD.tRow('Signed bias', f.spct(x.bias, 2)) + LDD.tRow('Forecast', f.int(x.forecast) + ' packs')
+          + LDD.tRow('Demand', f.int(x.demand) + ' packs') + LDD.tRow('WAPE', f.pct(x.wape, 1))};
+    }), {yFmt: function (v) { return f.pct(v, 0); }, height: 250, width: 520});
+
+    var pr = d.by_promo;
+    LDD.pairedBars($('promo'), pr.map(function (x) { return {name: x.name, a: x.wape, b: x.stockout_share}; }),
+      {aColor: 'var(--series-1)', bColor: 'var(--series-2)', aName: 'WAPE', bName: 'Stockout share', fmt: function (v) { return f.pct(v, 1); }});
+    $('promo-facts').innerHTML = pr.map(function (x) {
+      return '<div class="fact"><b>' + f.spct(x.bias, 1) + '</b>' + x.name + ': signed bias<br>' + f.pct(x.demand_share, 1) + ' of volume, '
+        + f.int(x.rows) + ' rows</div>';
+    }).join('');
+
+    // series scatter
+    var ser = {};
+    raw.rows.forEach(function (r) {
+      var key = r[F.product] + '|' + r[F.region];
+      var s = ser[key] || (ser[key] = {p: r[F.product], g: r[F.region], n: 0, so: 0, err: 0, dm: 0});
+      s.n++; s.so += r[F.stockout]; s.err += r[F.forecast] - r[F.demand]; s.dm += r[F.demand];
+    });
+    var pts = Object.keys(ser).map(function (key) {
+      var s = ser[key], nm = raw.products[s.p].id + ' · ' + raw.regions[s.g];
+      return {x: s.err / s.dm, y: s.so / s.n, name: nm, color: LDD.slotVar(s.g),
+        tip: LDD.tTitle(nm) + LDD.tRow('Signed bias', f.spct(s.err / s.dm, 1)) + LDD.tRow('Stockout months', s.so + ' of ' + s.n)};
+    });
+    var n = pts.length, mx = 0, my = 0; pts.forEach(function (p) { mx += p.x / n; my += p.y / n; });
+    var sxx = 0, syy = 0, sxy = 0; pts.forEach(function (p) { sxx += (p.x - mx) * (p.x - mx); syy += (p.y - my) * (p.y - my); sxy += (p.x - mx) * (p.y - my); });
+    $('r').textContent = (sxy / Math.sqrt(sxx * syy || 1)).toFixed(2);
+    $('sc-legend').innerHTML = raw.regions.map(function (g, i) {
+      return '<span class="legend-item"><span class="swatch" style="background:' + LDD.slotVar(i) + '"></span>' + g + '</span>';
+    }).join('');
+    LDD.scatter($('scatter'), pts, {xFmt: function (v) { return f.pct(v, 0); }, yFmt: function (v) { return f.pct(v, 0); },
+      xLabel: 'Signed forecast bias over 40 months (negative = under-forecast)', yLabel: 'Stockout share', fit: true});
+
+    // study constants
+    if (d.study && d.study.model && d.study.model.test) {
+      var t = d.study.model.test, mo = d.study.model;
+      $('m-base').textContent = f.pct(t.base_wape, 2); $('m-reg').textContent = f.pct(t.reg_wape, 2); $('m-reg2').textContent = f.pct(t.reg_wape, 2);
+      LDD.pairedBars($('model'), mo.by_region.map(function (x) { return {name: x.region_name, a: x.base_wape, b: x.reg_wape}; }),
+        {aColor: 'var(--series-2)', bColor: 'var(--series-3)', aName: 'Baseline WAPE', bName: 'Regression WAPE', fmt: function (v) { return f.pct(v, 1); }});
+      $('model-facts').innerHTML =
+          '<div class="fact"><b>' + f.pct(t.relative_improvement, 1) + '</b>lower WAPE (95% interval ' + f.pct(t.ci95[0], 1) + ' to ' + f.pct(t.ci95[1], 1) + ')</div>'
+        + '<div class="fact"><b>' + t.reg_mae.toFixed(1) + ' vs ' + t.base_mae.toFixed(1) + '</b>mean absolute error, packs per row</div>'
+        + '<div class="fact"><b>' + f.spct(t.reg_bias, 1) + ' vs ' + f.spct(t.base_bias, 1) + '</b>signed bias, regression vs baseline</div>';
+      var si = d.study.seasonal_index || {}, mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      LDD.columns($('season'), mon.map(function (nm, i) {
+        var v = (si[i + 1] || 1) - 1; return {name: nm, value: v, color: v >= 0 ? 'var(--series-1)' : 'var(--series-4)',
+          tip: LDD.tTitle(nm) + LDD.tRow('Against a typical month', f.spct(v, 1))};
+      }), {yFmt: function (v) { return f.spct(v, 0); }, height: 250, width: 520, valueName: 'Against typical'});
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

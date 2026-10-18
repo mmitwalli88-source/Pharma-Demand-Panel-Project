@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data quality · Pharma Demand Panel</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">Pharma Demand Panel <span>· Live</span></div>
+    <nav class="pages">
+      <a href="index.html">Overview</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="forecast.html">Forecast</a>
+      <a href="service.html">Service &amp; stock</a>
+      <a href="commercial.html">Commercial</a>
+      <a href="quality.html">Data quality</a>
+    </nav>
+    <div class="spacer"></div>
+    <span class="live"><span class="dot"></span><span class="live-text">Connecting&hellip;</span></span>
+    <button class="theme-btn" type="button">Dark</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="page-head">
+    <div class="eyebrow">DATA QUALITY &amp; WHAT WAS TESTED</div>
+    <h1>The file is consistent, and most of what it shows is real</h1>
+    <p class="insight"><span id="viol"></span>All <b id="nrec">5</b> accounting identities hold on every one of <b class="js-rows">5,000</b> rows right now, so the
+      figures reconcile. Of <b id="ntests">18</b> tests, <b id="nreal">13</b> survive correction for running that many; the rest are shown below with the
+      reason, because a claim that failed its test is as useful to know as one that passed.</p>
+  </div>
+  <div class="notice"><span class="ico">&#9679;</span>
+    <div><strong>Synthetic enterprise data.</strong> Every product, region and outcome is simulated, so
+      associations describe this simulation, not the pharmaceutical industry. Tags mark what each claim rests on:
+      <span class="tag real">real</span> survived a corrected significance test,
+      <span class="tag study">study</span> was measured once and does not move with the file.
+      Contribution excludes staffing, transport, financing and tax.</div></div>
+  <div class="notice is-critical js-stale" hidden></div>
+
+  <div class="panel">
+    <h2>Accounting identities, recomputed from the file on every change <span class="tag live">live</span></h2>
+    <p class="note">Edit the source and break one of these on purpose to see this table catch it. A violation means a ratio built on that row
+      is not trustworthy.</p>
+    <div class="panel-scroll"><div id="recon"></div></div>
+  </div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2>Significance register <span class="tag study">study</span></h2>
+    <p class="note" id="reg-note">Every apparent difference was tested before it was called a finding.</p>
+    <div class="panel-scroll"><div id="register"></div></div>
+  </div>
+
+  <div class="grid two">
+    <div class="panel">
+      <h2>Columns that are the same column <span class="tag study">study</span></h2>
+      <p class="note">Each value of one maps to exactly one value of the other, so they cannot be compared against each other and a
+        test on one is the same test on the other.</p>
+      <div id="alias"></div>
+    </div>
+    <div class="panel">
+      <h2>Cleaning checklist (Stage 1) <span class="tag study">study</span></h2>
+      <p class="note">Header, types, missing values, duplicates, keys, date continuity, impossible values and constant columns.</p>
+      <div class="panel-scroll"><div id="stage1"></div></div>
+    </div>
+  </div>
+
+  <div class="grid two">
+    <div class="panel">
+      <h2>How much data would confirm a regional shortage gap? <span class="tag study">study</span></h2>
+      <p class="note">Share of 500 simulated datasets in which a five-region test flagged one region running above the others on stockout
+        frequency (80% is the usual target). Rows are product-region-months per region; the file has 1,000.</p>
+      <div class="panel-scroll"><div id="power"></div></div>
+    </div>
+    <div class="panel">
+      <h2>What this file cannot show</h2>
+      <ul style="margin:0;padding-left:18px;color:var(--text-secondary);font-size:13.5px;line-height:1.7">
+        <li>Whether a new ordering policy lowers stockouts or cost. That needs a sequential simulation of the policy.</li>
+        <li>Forecast accuracy more than one month ahead from a fixed origin. The experiment is one-step-ahead.</li>
+        <li>Anything about real pharmaceutical demand, patient safety or clinical need. Every record is synthetic, and Benford's law on
+          revenue rejects organic amounts (p &lt; 0.0001).</li>
+        <li>Net enterprise profit. Staffing, transport, financing and tax are not modelled.</li>
+        <li>Why stock expired. Batch, shelf-life and recall data are absent.</li>
+        <li>Backorders. Unserved demand is lost in the model, not carried forward.</li>
+      </ul>
+    </div>
+  </div>
+  <footer class="foot">
+    Source: <span class="js-source">Team_2_Enterprise_Dataset_v1.csv</span>, <span class="js-rows">5,000</span> rows,
+    <span class="js-series">125</span> product-region series, <span class="js-period">Jan 2023 to Apr 2026</span>.
+    Every figure tagged live recomputes from the file on each change; the study was measured on
+    <span class="js-study-rows">5,000</span> rows. Last edit reached the screen
+    <span class="js-latency">n/a</span> after the file was saved.
+  </footer>
+</main>
+<script src="app.js"></script>
+<script>
+(function () {
+
+  var f = LDD.fmt, $ = LDD.byId;
+  function tag(v) {
+    var c = v === 'REAL' ? 'real' : v === 'SUGGESTIVE' ? 'suggestive' : v === 'NOISE' ? 'noise' : '';
+    return '<span class="tag ' + c + '">' + v.toLowerCase() + '</span>';
+  }
+  function setText(cls, v) { document.querySelectorAll('.js-' + cls).forEach(function (n) { n.textContent = v; }); }
+  function reg(d, id) {
+    return d.study ? (d.study.register || []).filter(function (r) { return r.id === id; })[0] : null;
+  }
+  function toggle(set, v, repaint) { if (set.has(v)) set.delete(v); else set.add(v); repaint(); }
+
+  LDD.start(function render(d) {
+    if (!d || !d.kpis) return;
+    var v = d.reconciliation.violations, names = Object.keys(v), bad = 0;
+    names.forEach(function (n) { bad += v[n]; });
+    $('nrec').textContent = names.length;
+    LDD.dataTable($('recon'), [{label: 'Identity'}, {label: 'Rows checked', num: true}, {label: 'Violations', num: true}, {label: 'Status'}],
+      names.map(function (n) {
+        return [n, f.int(d.reconciliation.checked_rows), f.int(v[n]), v[n] === 0 ? '<span class="ok">holds</span>' : '<span class="bad">BROKEN on ' + v[n] + ' rows</span>'];
+      }));
+    $('viol').innerHTML = bad ? '<span class="bad">' + f.int(bad) + ' identity violations are present in the current file, so ratios built on those rows are unreliable. </span>' : '';
+
+    var s = d.study;
+    if (!s) return;
+    var R = s.register || [], mc = s.multiple_comparisons || {};
+    var real = R.filter(function (r) { return r.verdict === 'REAL'; }).length;
+    $('ntests').textContent = R.length; $('nreal').textContent = real;
+    $('reg-note').innerHTML = R.length + ' tests, so the corrected threshold is 0.05 / ' + R.length + ' = <b>' + (mc.bonferroni_threshold || 0).toFixed(4)
+      + '</b>. <span class="tag real">real</span> beats it; <span class="tag suggestive">suggestive</span> beats 0.05 only; <span class="tag noise">noise</span> does neither. '
+      + 'A suggestive or noise result is shown but never called a finding.';
+    LDD.dataTable($('register'),
+      [{label: 'ID'}, {label: 'Claim'}, {label: 'Test and result'}, {label: 'p', num: true}, {label: 'Verdict'}],
+      R.map(function (r) {
+        return [r.id, r.claim,
+          r.test + '<span class="sub-note">' + r.result + (r.note ? ' · ' + r.note : '') + '</span>',
+          r.p == null ? '' : (r.p < 0.0001 ? '&lt; 0.0001' : r.p.toFixed(r.p < 0.01 ? 4 : 3)), tag(r.verdict)];
+      }));
+    document.querySelectorAll('#register td:nth-child(2), #register td:nth-child(3)').forEach(function (n) { n.classList.add('wrapcell'); });
+
+    $('alias').innerHTML = '<div class="facts">' + (s.aliases || []).map(function (a) {
+      return '<div class="fact"><b>' + a[0].replace(/_/g, ' ') + '</b>= ' + a[1].replace(/_/g, ' ') + '</div>';
+    }).join('') + '<div class="fact"><b>Cold storage</b>= product family D (the injection products)</div></div>';
+
+    LDD.dataTable($('stage1'), [{label: 'Check'}, {label: 'Result'}],
+      (s.stage1 || []).map(function (c) { return [c.check + '<span class="sub-note">' + c.detail + '</span>', c.pass ? '<span class="ok">pass</span>' : '<span class="bad">fail</span>']; }));
+    document.querySelectorAll('#stage1 td:first-child').forEach(function (n) { n.classList.add('wrapcell'); });
+
+    var p = (s.power || {}).table || {}, ns = [250, 500, 1000, 2000, 4000];
+    LDD.dataTable($('power'), [{label: 'One region runs'}].concat(ns.map(function (n) { return {label: f.int(n) + ' rows', num: true}; })),
+      Object.keys(p).map(function (lift) { return [lift + ' above the others'].concat(ns.map(function (n) { return f.pct(p[lift][n], 0); })); }));
+  });
+
+})();
+</script>
+</body>
+</html>

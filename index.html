@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overview · Pharma Demand Panel</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">Pharma Demand Panel <span>· Live</span></div>
+    <nav class="pages">
+      <a href="index.html">Overview</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="forecast.html">Forecast</a>
+      <a href="service.html">Service &amp; stock</a>
+      <a href="commercial.html">Commercial</a>
+      <a href="quality.html">Data quality</a>
+    </nav>
+    <div class="spacer"></div>
+    <span class="live"><span class="dot"></span><span class="live-text">Connecting&hellip;</span></span>
+    <button class="theme-btn" type="button">Dark</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="page-head">
+    <div class="eyebrow">OVERVIEW · FOR THE DEMAND PLANNING DIRECTOR</div>
+    <h1>Review forecasts before you raise stock</h1>
+    <p class="insight">Service looks healthy at <b class="js-fill">99.18%</b> of requested packs, yet
+      <b class="js-stockout">6.44%</b> of product-region-months run out of stock, and
+      <b class="js-underlost">97.6%</b> of lost packs fall in months the three-month average
+      <b>under-forecast</b>. <b class="js-topshare">47%</b> of lost revenue sits in just
+      <span class="js-topk">12</span> of <span class="js-series">125</span> series, so that is where the review starts.</p>
+  </div>
+  <div class="notice"><span class="ico">&#9679;</span>
+    <div><strong>Synthetic enterprise data.</strong> Every product, region and outcome is simulated, so
+      associations describe this simulation, not the pharmaceutical industry. Tags mark what each claim rests on:
+      <span class="tag real">real</span> survived a corrected significance test,
+      <span class="tag study">study</span> was measured once and does not move with the file.
+      Contribution excludes staffing, transport, financing and tax.</div></div>
+  <div class="notice is-critical js-stale" hidden></div>
+
+  <div class="kpi-row" id="kpis"></div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2>Requested demand against the baseline forecast</h2>
+    <p class="note">Monthly totals across all products and regions. The baseline is the file's own
+      <code>baseline_forecast_units</code>, the rounded mean of the previous three months, so it trails every turn in
+      demand. Hover for the month; the gap between the lines is the forecast error planners absorb as stock.</p>
+    <div class="legend" id="trend-legend"></div>
+    <div class="panel-scroll"><div id="trend"></div></div>
+  </div>
+
+  <div class="grid two">
+    <div class="panel">
+      <h2>Lost revenue by region</h2>
+      <p class="note"><span class="js-worst-region">North</span> and <span class="js-worst2-region">Central</span> stock out
+        most often (<span class="js-worst-region-so">9.4%</span> of months in the worst region against
+        <span class="js-best-region-so">3.9%</span> in <span class="js-best-region">West</span>). West is the largest region by volume and the best served,
+        so volume is not what drives shortage.
+        <span class="tag real">real</span></p>
+      <div id="region-bars"></div>
+    </div>
+    <div class="panel">
+      <h2>The review list: highest lost revenue first</h2>
+      <p class="note">The <span class="js-topk">12</span> product-region series with the most lost revenue.
+        <span class="tag study">study</span> <span id="stab">Five of these twelve also top the list in the other half of history.</span>
+        Use it as a review order, not a verdict on any one series.</p>
+      <div class="panel-scroll"><div id="review"></div></div>
+    </div>
+  </div>
+
+  <div class="through-line"><b>The through-line.</b> Fill rate is a volume average, and it hides a planning problem:
+    shortages cluster in months the baseline under-forecast, in planned promotions, and in a short list of series.
+    The next unit of planning effort belongs there, not in a blanket increase of safety stock. The Forecast page shows
+    a model that closes most of the gap; the Data quality page shows which of these claims survived testing.</div>
+  <footer class="foot">
+    Source: <span class="js-source">Team_2_Enterprise_Dataset_v1.csv</span>, <span class="js-rows">5,000</span> rows,
+    <span class="js-series">125</span> product-region series, <span class="js-period">Jan 2023 to Apr 2026</span>.
+    Every figure tagged live recomputes from the file on each change; the study was measured on
+    <span class="js-study-rows">5,000</span> rows. Last edit reached the screen
+    <span class="js-latency">n/a</span> after the file was saved.
+  </footer>
+</main>
+<script src="app.js"></script>
+<script>
+(function () {
+
+  var f = LDD.fmt, $ = LDD.byId;
+  function tag(v) {
+    var c = v === 'REAL' ? 'real' : v === 'SUGGESTIVE' ? 'suggestive' : v === 'NOISE' ? 'noise' : '';
+    return '<span class="tag ' + c + '">' + v.toLowerCase() + '</span>';
+  }
+  function setText(cls, v) { document.querySelectorAll('.js-' + cls).forEach(function (n) { n.textContent = v; }); }
+  function reg(d, id) {
+    return d.study ? (d.study.register || []).filter(function (r) { return r.id === id; })[0] : null;
+  }
+  function toggle(set, v, repaint) { if (set.has(v)) set.delete(v); else set.add(v); repaint(); }
+
+  LDD.start(function render(d) {
+    if (!d || !d.kpis || !d.raw) return;
+    var k = d.kpis, tr = d.trend;
+    var series = function (key) { return tr.map(function (m) { return m[key]; }); };
+    $('kpis').innerHTML =
+        LDD.tile('Weighted fill rate', f.pct(k.fill_rate, 2), f.int(k.lost) + ' of ' + f.int(k.demand) + ' requested packs unfilled',
+                 LDD.sparkline(series('fill_rate'), {color: 'var(--series-3)'}))
+      + LDD.tile('Stockout share', f.pct(k.stockout_share, 2), '<b>' + f.int(k.stockouts) + '</b> of ' + f.int(k.rows) + ' product-region-months',
+                 LDD.sparkline(series('stockout_share'), {color: 'var(--series-2)'}), '')
+      + LDD.tile('Forecast error (WAPE)', f.pct(k.wape, 2), 'Signed bias ' + f.spct(k.bias, 2) + (k.bias < 0 ? ', under-forecasting on balance' : ', over-forecasting on balance'),
+                 LDD.sparkline(series('wape'), {color: 'var(--series-1)'}), k.bias < 0 ? 'bad' : '')
+      + LDD.tile('Lost revenue', f.compact(k.lost_revenue), 'Value of ' + f.int(k.lost) + ' unserved packs',
+                 LDD.sparkline(series('lost_revenue'), {color: 'var(--critical)'}))
+      + LDD.tile('Gross profit', f.compact(k.gross_profit), 'Margin ' + f.pct(k.margin, 1) + ' on ' + f.compact(k.revenue) + ' revenue',
+                 LDD.sparkline(series('gross_profit'), {color: 'var(--series-3)'}));
+
+    $('trend-legend').innerHTML =
+        '<span class="legend-item"><span class="swatch" style="background:var(--series-1)"></span>Requested demand</span>'
+      + '<span class="legend-item"><span class="swatch" style="background:var(--series-2)"></span>Baseline forecast (3-month mean)</span>';
+    LDD.lineChart($('trend'), {
+      labels: tr.map(function (m) { return m.month; }), labelFmt: f.month, tipTitle: f.monthLong,
+      series: [{name: 'Requested demand', color: 'var(--series-1)', values: series('demand'), fill: true},
+               {name: 'Baseline forecast', color: 'var(--series-2)', values: series('forecast'), dash: '5 4'}],
+      yFmt: f.packs, tipFmt: function (v) { return f.int(v) + ' packs'; },
+      tipExtra: function (i) {
+        var m = tr[i]; return LDD.tRow('Error', f.spct(m.bias, 1) + ' (WAPE ' + f.pct(m.wape, 1) + ')');
+      }
+    });
+
+    var regs = d.by_region.slice().sort(function (a, b) { return b.lost_revenue - a.lost_revenue; });
+    LDD.barList($('region-bars'), regs.map(function (r) {
+      return {label: r.name, value: r.lost_revenue, valueText: f.compact(r.lost_revenue),
+        color: LDD.colorFor('region', r.name),
+        tip: LDD.tTitle(r.name) + LDD.tRow('Lost revenue', f.egp(r.lost_revenue)) + LDD.tRow('Stockout share', f.pct(r.stockout_share, 1))
+          + LDD.tRow('Fill rate', f.pct(r.fill_rate, 2)) + LDD.tRow('Share of volume', f.pct(r.demand_share, 1))};
+    }));
+
+    LDD.dataTable($('review'),
+      [{label: 'Series'}, {label: 'Family'}, {label: 'Lost revenue', num: true}, {label: 'Stockout months', num: true},
+       {label: 'WAPE', num: true}, {label: 'Bias', num: true}],
+      d.top_series.map(function (s) {
+        return [s.product + ' · ' + s.region, s.family, f.compact(s.lost_revenue), f.int(s.stockouts) + ' of ' + s.rows,
+                f.pct(s.wape, 1), f.spct(s.bias, 1)];
+      }));
+    if (d.study && d.study.stability && d.study.stability.top12_overlap != null) {
+      var st = d.study.stability;
+      $('stab').textContent = st.top12_overlap + ' of these ' + d.concentration.top_k + ' also top the list in the other half of history (chance expects '
+        + st.chance_overlap.toFixed(1) + '; rank correlation ' + st.spearman_rho.toFixed(2) + ').';
+    }
+  });
+
+})();
+</script>
+</body>
+</html>

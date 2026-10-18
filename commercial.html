@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Commercial · Pharma Demand Panel</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">Pharma Demand Panel <span>· Live</span></div>
+    <nav class="pages">
+      <a href="index.html">Overview</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="forecast.html">Forecast</a>
+      <a href="service.html">Service &amp; stock</a>
+      <a href="commercial.html">Commercial</a>
+      <a href="quality.html">Data quality</a>
+    </nav>
+    <div class="spacer"></div>
+    <span class="live"><span class="dot"></span><span class="live-text">Connecting&hellip;</span></span>
+    <button class="theme-btn" type="button">Dark</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="page-head">
+    <div class="eyebrow">COMMERCIAL &amp; INVENTORY CONTRIBUTION</div>
+    <h1>What stock costs, and what unserved demand costs</h1>
+    <p class="insight">Gross profit is <b class="js-gp">EGP 32.97M</b> at a <b class="js-margin">33.9%</b> margin. Holding and expiry
+      cost <b class="js-holding-expiry">EGP 800k</b> (<b id="cost-gp">2.4%</b> of gross profit), while <b class="js-lostrev">EGP 788k</b>
+      of demand went unserved and was never booked, <b id="lost-ratio">1.0</b> times the cost of carrying and expiring stock. That ratio is the price
+      of a forecast error in each direction, and it is what a better forecast should be judged against.</p>
+  </div>
+  <div class="notice"><span class="ico">&#9679;</span>
+    <div><strong>Synthetic enterprise data.</strong> Every product, region and outcome is simulated, so
+      associations describe this simulation, not the pharmaceutical industry. Tags mark what each claim rests on:
+      <span class="tag real">real</span> survived a corrected significance test,
+      <span class="tag study">study</span> was measured once and does not move with the file.
+      Contribution excludes staffing, transport, financing and tax.</div></div>
+  <div class="notice is-critical js-stale" hidden></div>
+
+  <div class="kpi-row" id="kpis"></div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2>Revenue and gross profit by month</h2>
+    <p class="note">Realised revenue (fulfilled packs at net price) and gross profit (revenue less cost of goods sold). Both in EGP on one axis.</p>
+    <div class="legend">
+      <span class="legend-item"><span class="swatch" style="background:var(--series-1)"></span>Revenue</span>
+      <span class="legend-item"><span class="swatch" style="background:var(--series-3)"></span>Gross profit</span></div>
+    <div class="panel-scroll"><div id="trend"></div></div>
+  </div>
+
+  <div class="grid two">
+    <div class="panel">
+      <h2>From revenue to modelled contribution</h2>
+      <p class="note">Net inventory contribution is gross profit less holding and expiry cost. It is <strong>not</strong> net enterprise
+        profit: staffing, transport, financing and tax are not in the file.</p>
+      <div id="bridge"></div>
+    </div>
+    <div class="panel">
+      <h2>Gross margin by product family</h2>
+      <p class="note">Family, supplier and dosage form are one grouping here. Margin differs between families because
+        price and purchase cost are set per product; with five products per family that is a catalogue difference, not a test result.</p>
+      <div id="margin-bars"></div>
+    </div>
+  </div>
+
+  <div class="grid two">
+    <div class="panel">
+      <h2>Revenue by sales channel</h2>
+      <p class="note">Channel is the dominant channel of each product-region series, and equals the customer segment one for one
+        (Institutional = Clinic, Retail = Hospital, Wholesale = Pharmacy). Stockout share by channel is <span class="tag noise">noise</span>
+        after accounting for 125 series (p = 0.12).</p>
+      <div id="chan-bars"></div>
+    </div>
+    <div class="panel">
+      <h2>Where unserved demand sits, by promotion status</h2>
+      <p class="note">Lost revenue is potential selling value at net price, not recognised sales. Promoted months are
+        <span class="js-promo-share">20.4%</span> of volume and <b id="promo-lostshare">41%</b> of lost revenue.</p>
+      <div id="promo-bars"></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2>Holding and expiry cost by family</h2>
+    <p class="note">Holding cost is 1.5% a month on average stock at purchase cost; expiry cost values removed packs at purchase cost.
+      Batch-level shelf life is not in the file, so causes of expiry cannot be traced.</p>
+    <div class="panel-scroll"><div id="cost-table"></div></div>
+  </div>
+
+  <div class="through-line"><b>The through-line.</b> Money moves in three places that are all small next to gross profit: stock that
+    is held, stock that expires, and demand that is not met. None justifies a blanket policy
+    change on its own, but together they set the price of a forecast error, and that price is what the forecast comparison should be judged against.</div>
+  <footer class="foot">
+    Source: <span class="js-source">Team_2_Enterprise_Dataset_v1.csv</span>, <span class="js-rows">5,000</span> rows,
+    <span class="js-series">125</span> product-region series, <span class="js-period">Jan 2023 to Apr 2026</span>.
+    Every figure tagged live recomputes from the file on each change; the study was measured on
+    <span class="js-study-rows">5,000</span> rows. Last edit reached the screen
+    <span class="js-latency">n/a</span> after the file was saved.
+  </footer>
+</main>
+<script src="app.js"></script>
+<script>
+(function () {
+
+  var f = LDD.fmt, $ = LDD.byId;
+  function tag(v) {
+    var c = v === 'REAL' ? 'real' : v === 'SUGGESTIVE' ? 'suggestive' : v === 'NOISE' ? 'noise' : '';
+    return '<span class="tag ' + c + '">' + v.toLowerCase() + '</span>';
+  }
+  function setText(cls, v) { document.querySelectorAll('.js-' + cls).forEach(function (n) { n.textContent = v; }); }
+  function reg(d, id) {
+    return d.study ? (d.study.register || []).filter(function (r) { return r.id === id; })[0] : null;
+  }
+  function toggle(set, v, repaint) { if (set.has(v)) set.delete(v); else set.add(v); repaint(); }
+
+  LDD.start(function render(d) {
+    if (!d || !d.kpis || !d.raw) return;
+    var k = d.kpis, tr = d.trend;
+    var series = function (key) { return tr.map(function (m) { return m[key]; }); };
+    document.getElementById('cost-gp').textContent = f.pct((k.holding + k.expiry) / k.gross_profit, 1);
+    $('lost-ratio').textContent = ((k.lost_revenue) / ((k.holding + k.expiry) || 1)).toFixed(1);
+    var pl = d.by_promo.filter(function (x) { return x.name === 'Planned'; })[0];
+    $('promo-lostshare').textContent = f.pct(pl ? pl.lost_revenue / (k.lost_revenue || 1) : 0, 0);
+    $('kpis').innerHTML =
+        LDD.tile('Realised revenue', f.compact(k.revenue), f.int(k.fulfilled) + ' packs fulfilled', LDD.sparkline(series('revenue')))
+      + LDD.tile('Gross profit', f.compact(k.gross_profit), 'Margin ' + f.pct(k.margin, 1), LDD.sparkline(series('gross_profit'), {color: 'var(--series-3)'}))
+      + LDD.tile('Holding + expiry cost', f.compact(k.holding + k.expiry), f.compact(k.holding) + ' holding, ' + f.compact(k.expiry) + ' expiry')
+      + LDD.tile('Lost revenue', f.compact(k.lost_revenue), 'Potential value of ' + f.int(k.lost) + ' unserved packs', LDD.sparkline(series('lost_revenue'), {color: 'var(--critical)'}))
+      + LDD.tile('Modelled contribution', f.compact(k.gross_profit - k.holding - k.expiry), 'Not net enterprise profit');
+
+    LDD.lineChart($('trend'), {
+      labels: tr.map(function (m) { return m.month; }), labelFmt: f.month, tipTitle: f.monthLong,
+      series: [{name: 'Revenue', color: 'var(--series-1)', values: series('revenue'), fill: true},
+               {name: 'Gross profit', color: 'var(--series-3)', values: series('gross_profit')}],
+      yFmt: function (v) { return f.compact(v).replace('EGP ', ''); }, tipFmt: f.egp,
+      tipExtra: function (i) { return LDD.tRow('Margin', f.pct(tr[i].margin, 1)); }
+    });
+
+    var cogs = k.revenue - k.gross_profit, contrib = k.gross_profit - k.holding - k.expiry;
+    LDD.barList($('bridge'), [
+      {label: 'Revenue', value: k.revenue, valueText: f.compact(k.revenue), color: 'var(--series-1)'},
+      {label: 'Cost of goods', value: cogs, valueText: '-' + f.compact(cogs), color: 'var(--series-4)'},
+      {label: 'Gross profit', value: k.gross_profit, valueText: f.compact(k.gross_profit), color: 'var(--series-3)'},
+      {label: 'Holding cost', value: k.holding, valueText: '-' + f.compact(k.holding), color: 'var(--critical)'},
+      {label: 'Expiry cost', value: k.expiry, valueText: '-' + f.compact(k.expiry), color: 'var(--critical)'},
+      {label: 'Contribution', value: contrib, valueText: f.compact(contrib), color: 'var(--series-3)'}
+    ].map(function (r) { r.tip = LDD.tTitle(r.label) + LDD.tRow('EGP', f.egp(r.value)); return r; }));
+
+    var fam = d.by_family.slice().sort(function (a, b) { return b.margin - a.margin; });
+    LDD.barList($('margin-bars'), fam.map(function (x) {
+      return {label: x.name, value: x.margin, valueText: f.pct(x.margin, 1), color: LDD.colorFor('family', x.name),
+        tip: LDD.tTitle(x.name) + LDD.tRow('Gross margin', f.pct(x.margin, 2)) + LDD.tRow('Revenue', f.compact(x.revenue)) + LDD.tRow('Gross profit', f.compact(x.gross_profit))};
+    }), {max: 0.5});
+
+    var ch = d.by_channel.slice().sort(function (a, b) { return b.revenue - a.revenue; });
+    LDD.barList($('chan-bars'), ch.map(function (x) {
+      return {label: x.name, value: x.revenue, valueText: f.compact(x.revenue), color: 'var(--series-1)',
+        tip: LDD.tTitle(x.name) + LDD.tRow('Revenue', f.egp(x.revenue)) + LDD.tRow('Margin', f.pct(x.margin, 1)) + LDD.tRow('Stockout share', f.pct(x.stockout_share, 1))};
+    }));
+    LDD.barList($('promo-bars'), d.by_promo.map(function (x) {
+      return {label: x.name, value: x.lost_revenue, valueText: f.compact(x.lost_revenue) + ' · ' + f.pct(x.lost_revenue / (k.lost_revenue || 1), 0), color: x.name === 'Planned' ? 'var(--series-2)' : 'var(--series-1)',
+        tip: LDD.tTitle(x.name) + LDD.tRow('Lost revenue', f.egp(x.lost_revenue)) + LDD.tRow('Share of volume', f.pct(x.demand_share, 1))};
+    }));
+    var tot = {h: 0, e: 0}; fam.forEach(function (x) { tot.h += x.holding; tot.e += x.expiry; });
+    LDD.dataTable($('cost-table'),
+      [{label: 'Family'}, {label: 'Holding cost', num: true}, {label: 'Expiry cost', num: true}, {label: 'Expiry share', num: true}, {label: 'Lost revenue', num: true}],
+      d.by_family.map(function (x) { return [x.name, f.egp(x.holding), f.egp(x.expiry), f.pct(x.expiry / (tot.e || 1), 1), f.egp(x.lost_revenue)]; }));
+  });
+
+})();
+</script>
+</body>
+</html>

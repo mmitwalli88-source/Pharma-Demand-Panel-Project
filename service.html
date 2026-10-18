@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service & stock · Pharma Demand Panel</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">Pharma Demand Panel <span>· Live</span></div>
+    <nav class="pages">
+      <a href="index.html">Overview</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="forecast.html">Forecast</a>
+      <a href="service.html">Service &amp; stock</a>
+      <a href="commercial.html">Commercial</a>
+      <a href="quality.html">Data quality</a>
+    </nav>
+    <div class="spacer"></div>
+    <span class="live"><span class="dot"></span><span class="live-text">Connecting&hellip;</span></span>
+    <button class="theme-btn" type="button">Dark</button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="page-head">
+    <div class="eyebrow">SERVICE &amp; STOCK</div>
+    <h1>High fill rate, uneven shortages</h1>
+    <p class="insight">Fill rate is <b class="js-fill">99.18%</b> of requested packs because most months are served in full;
+      <b class="js-stockouts">322</b> product-region-months are not. <span class="js-worst-region">North</span> stocks out in
+      <b class="js-worst-region-so">9.4%</b> of months and <span class="js-best-region">West</span> in
+      <b class="js-best-region-so">3.9%</b>: volume-weighted service and shortage frequency answer different questions, and both stay visible.
+      Closing stock in <span class="js-snapmonth">April 2026</span> is <b class="js-closing">EGP 939k</b>, about
+      <b class="js-cover">15.5</b> days of demand.</p>
+  </div>
+  <div class="notice"><span class="ico">&#9679;</span>
+    <div><strong>Synthetic enterprise data.</strong> Every product, region and outcome is simulated, so
+      associations describe this simulation, not the pharmaceutical industry. Tags mark what each claim rests on:
+      <span class="tag real">real</span> survived a corrected significance test,
+      <span class="tag study">study</span> was measured once and does not move with the file.
+      Contribution excludes staffing, transport, financing and tax.</div></div>
+  <div class="notice is-critical js-stale" hidden></div>
+
+  <div class="kpi-row" id="kpis"></div>
+
+  <div class="grid two">
+    <div class="panel">
+      <h2>Stockout share by region <span class="tag real">real</span></h2>
+      <p class="note">Share of a region's product-months with any lost pack. The regional gap survives correction
+        (chi-square on counts, p &lt; 0.0001). Of the two worst regions, one holds the highest count in most
+        resamples: <span id="boot">North 77%, Central 23%</span> <span class="tag study">study</span>.</p>
+      <div id="so-bars"></div>
+    </div>
+    <div class="panel">
+      <h2>Unfilled share of requested packs, by region</h2>
+      <p class="note">One minus the fill rate, so small differences are visible: every region fills over 98%, which on a
+        0 to 100 axis would look identical.</p>
+      <div id="unfilled-bars"></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2>Region scorecard</h2>
+    <p class="note">Each ratio is a sum over a sum for that region. The
+      table is the accessible version of the charts above.</p>
+    <div class="panel-scroll"><div id="region-table"></div></div>
+  </div>
+
+  <div class="grid two">
+    <div class="panel">
+      <h2>Packs lost, by product (top 10)</h2>
+      <p class="note">Coloured by family. Products differ greatly in size (<span class="tag real">real</span>), so this ranks
+        absolute loss; read it with the review list on the Overview page.</p>
+      <div id="prod-bars"></div>
+    </div>
+    <div class="panel">
+      <h2>Stockout share by criticality class</h2>
+      <p class="note">Internal service priority, a product attribute covering 25 products. High-criticality products stock out most,
+        but at this sample size the gap is <span class="tag suggestive">suggestive</span> only (uncorrected p = 0.024).</p>
+      <div id="crit-bars"></div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:18px">
+    <h2>Inventory position at <span class="js-snapmonth">April 2026</span></h2>
+    <p class="note">A stock is a snapshot: these figures are the closing position of one month, never added across months.
+      Summing the carrying value over all 40 months would give EGP 32.9 million of "stock" that never existed at once.
+      Cover is closing packs divided by that month's daily demand.</p>
+    <div class="panel-scroll"><div id="stock-table"></div></div>
+  </div>
+
+  <div class="through-line"><b>The through-line.</b> The service problem is narrow, not general. A few regions, the promoted months and a
+    short list of series account for the shortages, while the stock carried at month end is modest. That points to targeted forecast and
+    buffer review, not a larger inventory everywhere.</div>
+  <footer class="foot">
+    Source: <span class="js-source">Team_2_Enterprise_Dataset_v1.csv</span>, <span class="js-rows">5,000</span> rows,
+    <span class="js-series">125</span> product-region series, <span class="js-period">Jan 2023 to Apr 2026</span>.
+    Every figure tagged live recomputes from the file on each change; the study was measured on
+    <span class="js-study-rows">5,000</span> rows. Last edit reached the screen
+    <span class="js-latency">n/a</span> after the file was saved.
+  </footer>
+</main>
+<script src="app.js"></script>
+<script>
+(function () {
+
+  var f = LDD.fmt, $ = LDD.byId;
+  function tag(v) {
+    var c = v === 'REAL' ? 'real' : v === 'SUGGESTIVE' ? 'suggestive' : v === 'NOISE' ? 'noise' : '';
+    return '<span class="tag ' + c + '">' + v.toLowerCase() + '</span>';
+  }
+  function setText(cls, v) { document.querySelectorAll('.js-' + cls).forEach(function (n) { n.textContent = v; }); }
+  function reg(d, id) {
+    return d.study ? (d.study.register || []).filter(function (r) { return r.id === id; })[0] : null;
+  }
+  function toggle(set, v, repaint) { if (set.has(v)) set.delete(v); else set.add(v); repaint(); }
+
+  LDD.start(function render(d) {
+    if (!d || !d.kpis || !d.raw) return;
+    var k = d.kpis, raw = d.raw, ctx = LDD.ctx, F = ctx.F, rows = raw.rows, s = d.snapshot;
+    $('kpis').innerHTML =
+        LDD.tile('Weighted fill rate', f.pct(k.fill_rate, 2), f.int(k.lost) + ' packs unfilled')
+      + LDD.tile('Stockout share', f.pct(k.stockout_share, 2), f.int(k.stockouts) + ' of ' + f.int(k.rows) + ' rows')
+      + LDD.tile('Series never short', f.int(d.concentration.series_without_stockout), 'of ' + f.int(k.series) + ' with no stockout month')
+      + LDD.tile('Closing stock value', f.compact(s.closing_value), f.int(s.closing_units) + ' packs at ' + f.monthLong(s.month))
+      + LDD.tile('Inventory cover', s.cover_days.toFixed(1) + ' days', 'At ' + f.monthLong(s.month) + ' demand');
+
+    var rg = d.by_region.slice();
+    var bySo = rg.slice().sort(function (a, b) { return b.stockout_share - a.stockout_share; });
+    LDD.barList($('so-bars'), bySo.map(function (r) {
+      return {label: r.name, value: r.stockout_share, valueText: f.pct(r.stockout_share, 1), color: 'var(--series-1)',
+        tip: LDD.tTitle(r.name) + LDD.tRow('Stockout months', f.int(r.stockouts) + ' of ' + f.int(r.rows)) + LDD.tRow('Lost packs', f.int(r.lost))};
+    }));
+    var byUn = rg.slice().sort(function (a, b) { return (1 - b.fill_rate) - (1 - a.fill_rate); });
+    LDD.barList($('unfilled-bars'), byUn.map(function (r) {
+      return {label: r.name, value: 1 - r.fill_rate, valueText: f.pct(1 - r.fill_rate, 2), color: 'var(--series-4)',
+        tip: LDD.tTitle(r.name) + LDD.tRow('Fill rate', f.pct(r.fill_rate, 2)) + LDD.tRow('Lost revenue', f.egp(r.lost_revenue))};
+    }));
+    LDD.dataTable($('region-table'),
+      [{label: 'Region'}, {label: 'Share of volume', num: true}, {label: 'Fill rate', num: true}, {label: 'Stockout share', num: true},
+       {label: 'Lost packs', num: true}, {label: 'Lost revenue', num: true}, {label: 'WAPE', num: true}],
+      rg.map(function (r) { return [r.name, f.pct(r.demand_share, 1), f.pct(r.fill_rate, 2), f.pct(r.stockout_share, 1), f.int(r.lost), f.compact(r.lost_revenue), f.pct(r.wape, 1)]; }));
+
+    var prods = d.by_product.slice().sort(function (a, b) { return b.lost - a.lost; }).slice(0, 10);
+    var famOf = {}; raw.products.forEach(function (p) { famOf[p.id] = p.family; });
+    LDD.barList($('prod-bars'), prods.map(function (p) {
+      return {label: p.name, value: p.lost, valueText: f.int(p.lost) + ' packs', color: LDD.colorFor('family', famOf[p.name]),
+        tip: LDD.tTitle(p.name + ' · ' + famOf[p.name]) + LDD.tRow('Lost packs', f.int(p.lost)) + LDD.tRow('Stockout months', f.int(p.stockouts) + ' of ' + f.int(p.rows))
+          + LDD.tRow('Fill rate', f.pct(p.fill_rate, 2))};
+    }));
+    LDD.barList($('crit-bars'), d.by_criticality.map(function (c) {
+      return {label: c.name, value: c.stockout_share, valueText: f.pct(c.stockout_share, 1), color: 'var(--series-1)',
+        tip: LDD.tTitle(c.name) + LDD.tRow('Stockout share', f.pct(c.stockout_share, 2)) + LDD.tRow('Share of volume', f.pct(c.demand_share, 1))};
+    }));
+
+    // snapshot by region at the latest month
+    var mi = raw.months.length - 1, days = raw.month_days[mi];
+    var snap = raw.regions.map(function (g, gi) {
+      var u = 0, v = 0, dm = 0;
+      rows.forEach(function (r) { if (r[F.month] === mi && r[F.region] === gi) { u += r[F.closing_units]; v += r[F.closing_value]; dm += r[F.demand]; } });
+      return {name: g, u: u, v: v, cover: dm ? u / (dm / days) : 0};
+    });
+    var tu = 0, tv = 0; snap.forEach(function (x) { tu += x.u; tv += x.v; });
+    LDD.dataTable($('stock-table'),
+      [{label: 'Region'}, {label: 'Closing packs', num: true}, {label: 'Carrying value', num: true}, {label: 'Cover (days)', num: true}],
+      snap.map(function (x) { return [x.name, f.int(x.u), f.egp(x.v), x.cover.toFixed(1)]; })
+        .concat([['<b>All regions</b>', '<b>' + f.int(tu) + '</b>', '<b>' + f.egp(tv) + '</b>', '<b>' + s.cover_days.toFixed(1) + '</b>']]));
+
+    if (d.study && d.study.bootstrap_region_worst_stockout) {
+      var b = d.study.bootstrap_region_worst_stockout;
+      $('boot').textContent = Object.keys(b).filter(function (x) { return b[x] > 0.005; })
+        .sort(function (x, y) { return b[y] - b[x]; }).map(function (x) { return x + ' ' + Math.round(b[x] * 100) + '%'; }).join(', ');
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
